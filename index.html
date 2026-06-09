@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>A Little Question…</title>
+<style>
+  :root {
+    --green: #4caf6e;
+    --green-dark: #2e7d4f;
+    --leaf: #6fbf73;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body { height: 100%; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: linear-gradient(135deg, #c8e6c9 0%, #dcf2dd 40%, #f1faf1 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* Floating nature elements background */
+  .nature-bg {
+    position: fixed;
+    top: 100%;
+    font-size: 24px;
+    pointer-events: none;
+    animation: floatUp linear infinite;
+    user-select: none;
+  }
+
+  @keyframes floatUp {
+    0%   { transform: translateY(0) rotate(0deg); opacity: 0; }
+    10%  { opacity: 1; }
+    90%  { opacity: 1; }
+    100% { transform: translateY(-110vh) rotate(360deg); opacity: 0; }
+  }
+
+  .card {
+    position: relative;
+    z-index: 2;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(10px);
+    border-radius: 28px;
+    padding: 56px 48px;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(46, 125, 79, 0.25);
+    max-width: 540px;
+    width: 90%;
+    animation: popIn 0.7s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+  }
+
+  @keyframes popIn {
+    0%   { transform: scale(0.7); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  .big-heart {
+    font-size: 64px;
+    display: inline-block;
+    animation: beat 1.2s ease-in-out infinite;
+  }
+
+  @keyframes beat {
+    0%, 100% { transform: scale(1); }
+    25%      { transform: scale(1.18); }
+    50%      { transform: scale(0.95); }
+  }
+
+  h1 {
+    font-size: 2.4rem;
+    color: var(--green-dark);
+    margin: 18px 0 12px;
+    line-height: 1.25;
+  }
+
+  p.sub {
+    color: #557a5e;
+    font-size: 1.1rem;
+    margin-bottom: 36px;
+  }
+
+  .buttons {
+    display: flex;
+    gap: 18px;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    position: relative;
+    min-height: 60px;
+  }
+
+  button {
+    font-size: 1.15rem;
+    font-weight: 600;
+    border: none;
+    border-radius: 50px;
+    padding: 16px 38px;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .yes {
+    background: linear-gradient(135deg, var(--leaf), var(--green-dark));
+    color: #fff;
+    box-shadow: 0 8px 20px rgba(46, 125, 79, 0.4);
+    position: relative;
+    z-index: 3;
+  }
+  .yes:hover { transform: translateY(-3px) scale(1.05); box-shadow: 0 12px 28px rgba(46, 125, 79, 0.5); }
+
+  .no {
+    background: #fff;
+    color: #557a5e;
+    border: 2px solid #bfe3c4;
+    transition: left 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+                top 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+                background 0.15s ease;
+  }
+  .no:hover { background: #eaf7ec; }
+
+  /* Celebration screen */
+  .celebrate {
+    display: none;
+  }
+  .celebrate h1 { font-size: 2.8rem; }
+  .celebrate .big-heart { font-size: 84px; }
+
+  .confetti {
+    position: fixed;
+    width: 10px;
+    height: 14px;
+    top: -20px;
+    z-index: 5;
+    pointer-events: none;
+  }
+
+  @keyframes fall {
+    to { transform: translateY(110vh) rotate(720deg); opacity: 0.9; }
+  }
+
+  /* --- Date picker modal --- */
+  .overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    background: rgba(33, 71, 46, 0.35);
+    backdrop-filter: blur(4px);
+    align-items: center;
+    justify-content: center;
+  }
+  .overlay.show { display: flex; }
+
+  .modal { max-width: 440px; padding: 44px 40px; }
+  .modal h1 { font-size: 1.9rem; }
+  .modal .sub { margin-bottom: 24px; }
+
+  .field { text-align: left; margin-bottom: 18px; }
+  .field label {
+    display: block;
+    font-weight: 600;
+    color: var(--green-dark);
+    margin-bottom: 6px;
+    font-size: 0.95rem;
+  }
+  .field label .opt { font-weight: 400; color: #8aa893; font-size: 0.85rem; }
+  .field input,
+  .field textarea {
+    width: 100%;
+    font-size: 1rem;
+    font-family: inherit;
+    padding: 12px 14px;
+    border: 2px solid #bfe3c4;
+    border-radius: 14px;
+    background: #f7fcf8;
+    color: #2e4636;
+    outline: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+  .field input:focus,
+  .field textarea:focus {
+    border-color: var(--green);
+    box-shadow: 0 0 0 3px rgba(76, 175, 110, 0.18);
+  }
+  .field textarea { resize: vertical; }
+
+  .err {
+    color: #c0392b;
+    font-size: 0.9rem;
+    min-height: 1.1em;
+    margin-bottom: 10px;
+  }
+
+  .date-badge {
+    margin-top: 18px;
+    display: inline-block;
+    background: #e7f6ea;
+    color: var(--green-dark);
+    font-weight: 600;
+    padding: 12px 22px;
+    border-radius: 16px;
+    border: 2px solid #bfe3c4;
+  }
+</style>
+</head>
+<body>
+
+  <div class="card" id="askCard">
+    <span class="big-heart" id="heart">💚</span>
+    <h1 id="title">Will you go on a date with me?</h1>
+    <p class="sub" id="subtitle">No pressure… okay, maybe a little pressure 🌱</p>
+    <div class="buttons">
+      <button class="yes" id="yesBtn">Yes! 🌸</button>
+      <button class="no" id="noBtn">No</button>
+    </div>
+  </div>
+
+  <div class="card celebrate" id="celebrateCard">
+    <span class="big-heart">🌻</span>
+    <h1>Yay! It's a date! 🌿</h1>
+    <p class="sub" id="celebrateSub">You just made my whole day. I can't wait! 🌷</p>
+    <p class="date-badge" id="dateBadge" style="display:none;"></p>
+  </div>
+
+  <!-- Date picker modal -->
+  <div class="overlay" id="overlay">
+    <div class="card modal" id="modalCard">
+      <span class="big-heart">🌸</span>
+      <h1>Yay! Now… when?</h1>
+      <p class="sub">Pick a day for our date 🌿</p>
+      <div class="field">
+        <label for="dateInput">Date</label>
+        <input type="date" id="dateInput" />
+      </div>
+      <div class="field">
+        <label for="timeInput">Time <span class="opt">(optional)</span></label>
+        <input type="time" id="timeInput" />
+      </div>
+      <div class="field">
+        <label for="noteInput">A little note <span class="opt">(optional)</span></label>
+        <textarea id="noteInput" rows="2" placeholder="Can't wait! 🌷"></textarea>
+      </div>
+      <p class="err" id="errMsg"></p>
+      <div class="buttons">
+        <button class="yes" id="confirmBtn">Confirm 💚</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+  // --- Floating nature elements background ---
+  const elements = ['🌿', '🍃', '🌱', '🍀', '🌸', '🌼', '🦋', '🐝', '🌷', '🌻', '🌳'];
+  function spawnElement() {
+    const el = document.createElement('div');
+    el.className = 'nature-bg';
+    el.textContent = elements[Math.floor(Math.random() * elements.length)];
+    el.style.left = Math.random() * 100 + 'vw';
+    el.style.fontSize = (16 + Math.random() * 28) + 'px';
+    const dur = 6 + Math.random() * 6;
+    el.style.animationDuration = dur + 's';
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), dur * 1000);
+  }
+  setInterval(spawnElement, 500);
+
+  // --- The escalating "No" flow ---
+  const noBtn = document.getElementById('noBtn');
+  const yesBtn = document.getElementById('yesBtn');
+  const heart = document.getElementById('heart');
+  const title = document.getElementById('title');
+  const subtitle = document.getElementById('subtitle');
+
+  // Each click on "No" advances to the next screen.
+  // The final screen ("Last chance") has no "No" button — only "Yes".
+  const steps = [
+    {
+      heart: '🥺',
+      title: 'Are you sure?',
+      subtitle: 'Take a moment… think about it 🍃',
+      yes: 'Okay, yes! 🌸',
+      no: 'Still no',
+    },
+    {
+      heart: '😟',
+      title: 'Are you really sure?',
+      subtitle: "We could go for a walk in the park together 🌳",
+      yes: 'Fine, yes! 🌼',
+      no: 'Yes, no',
+    },
+    {
+      heart: '😢',
+      title: 'Please reconsider…',
+      subtitle: "Even the flowers are rooting for us 🌷",
+      yes: 'Aww okay, yes! 🌻',
+      no: 'No, sorry',
+    },
+    {
+      heart: '🥹',
+      title: 'Pretty please? 🌹',
+      subtitle: "I promise it'll bloom into the best date ever 🌱",
+      yes: 'Yes, of course! 🍀',
+      no: 'Last chance…',
+    },
+    {
+      heart: '😭',
+      title: 'Last chance!',
+      subtitle: "Go on, try to press No 😏",
+      yes: 'YES! 🌿🌸',
+      no: 'No',
+      dodge: true, // on this screen the No button runs away
+    },
+  ];
+
+  let step = 0;
+  let dodging = false;
+
+  function showStep(s) {
+    heart.textContent = s.heart;
+    title.textContent = s.title;
+    subtitle.textContent = s.subtitle;
+    yesBtn.textContent = s.yes;
+    noBtn.textContent = s.no;
+
+    // Make Yes a little more tempting each round.
+    yesBtn.style.transform = `scale(${1 + step * 0.12})`;
+
+    // On the final screen, the No button becomes impossible to catch.
+    dodging = !!s.dodge;
+
+    // Replay the pop-in animation for a fresh "new page" feel.
+    askCard.style.animation = 'none';
+    void askCard.offsetWidth; // force reflow
+    askCard.style.animation = 'popIn 0.5s cubic-bezier(0.18, 0.89, 0.32, 1.28)';
+  }
+
+  // On the last screen, the No button bounces to a random spot every time
+  // the user tries to touch it — always visible, never catchable.
+  // The first time, we move it out of the card to <body>; the card creates
+  // its own stacking context (z-index + backdrop-filter), which would
+  // otherwise trap the button behind the Yes button no matter its z-index.
+  let detached = false;
+  function flee() {
+    if (!detached) { document.body.appendChild(noBtn); detached = true; }
+    const pad = 20;
+    const maxX = window.innerWidth - noBtn.offsetWidth - pad;
+    const maxY = window.innerHeight - noBtn.offsetHeight - pad;
+    noBtn.style.position = 'fixed';
+    noBtn.style.zIndex = '40'; // above the card, but below the modal overlay (z-index 50)
+    noBtn.style.left = pad + Math.random() * Math.max(0, maxX - pad) + 'px';
+    noBtn.style.top = pad + Math.random() * Math.max(0, maxY - pad) + 'px';
+  }
+
+  noBtn.addEventListener('click', () => {
+    if (dodging) { flee(); return; }  // can't be caught on the last screen
+    if (step < steps.length) {
+      showStep(steps[step]);
+      step++;
+    }
+  });
+
+  // Bounce away on hover/touch too, so it can never actually be pressed.
+  noBtn.addEventListener('mouseover', () => { if (dodging) flee(); });
+  noBtn.addEventListener('touchstart', (e) => { if (dodging) { e.preventDefault(); flee(); } });
+
+  // --- Yes -> open the date picker modal ---
+  const askCard = document.getElementById('askCard');
+  const celebrateCard = document.getElementById('celebrateCard');
+  const overlay = document.getElementById('overlay');
+  const dateInput = document.getElementById('dateInput');
+  const timeInput = document.getElementById('timeInput');
+  const noteInput = document.getElementById('noteInput');
+  const confirmBtn = document.getElementById('confirmBtn');
+  const errMsg = document.getElementById('errMsg');
+  const dateBadge = document.getElementById('dateBadge');
+  const celebrateSub = document.getElementById('celebrateSub');
+
+  // Don't let the user pick a day in the past.
+  const today = new Date();
+  const pad2 = (n) => String(n).padStart(2, '0');
+  dateInput.min = `${today.getFullYear()}-${pad2(today.getMonth() + 1)}-${pad2(today.getDate())}`;
+
+  yesBtn.addEventListener('click', () => {
+    noBtn.style.display = 'none'; // the runaway No is done — get it out of the way
+    overlay.classList.add('show');
+    setTimeout(() => dateInput.focus(), 100);
+  });
+
+  // Pretty-print "2026-06-20" -> "Saturday, 20 June 2026"
+  function prettyDate(iso, time) {
+    let out = iso;
+    const d = new Date(iso + 'T00:00');
+    if (!isNaN(d)) {
+      out = d.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    }
+    return time ? `${out} at ${time}` : out;
+  }
+
+  // Show the locked, confirmed screen (used after confirm AND on reload).
+  function showConfirmed(date, time) {
+    overlay.classList.remove('show');
+    askCard.style.display = 'none';
+    celebrateSub.textContent = "It's official — I can't wait! 🌷";
+    dateBadge.textContent = '📅 ' + prettyDate(date, time);
+    dateBadge.style.display = 'inline-block';
+    celebrateCard.style.display = 'block';
+  }
+
+  // --- Confirm the date: send to the server, lock the page ---
+  confirmBtn.addEventListener('click', async () => {
+    errMsg.textContent = '';
+    const date = dateInput.value;
+    const time = timeInput.value;
+    const note = noteInput.value.trim();
+    if (!date) { errMsg.textContent = 'Please pick a date first 🌱'; return; }
+
+    confirmBtn.disabled = true;
+    const original = confirmBtn.textContent;
+    confirmBtn.textContent = 'Sending… 💌';
+    try {
+      const res = await fetch('/api/confirm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date, time, note }),
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || 'Something went wrong');
+      // Lock locally too, so a reload can't restart the flow.
+      localStorage.setItem('dateLocked', JSON.stringify({ date: data.date || date, time: data.time || time }));
+      showConfirmed(data.date || date, data.time || time);
+      burstConfetti();
+    } catch (e) {
+      errMsg.textContent = 'Could not send — please try again. (' + e.message + ')';
+      confirmBtn.disabled = false;
+      confirmBtn.textContent = original;
+    }
+  });
+
+  // --- On load: if a date was already confirmed, lock straight to it ---
+  (async function checkLock() {
+    // Local lock first (instant, offline-safe).
+    try {
+      const local = JSON.parse(localStorage.getItem('dateLocked') || 'null');
+      if (local && local.date) { showConfirmed(local.date, local.time); return; }
+    } catch {}
+    // Then the server (source of truth, survives different browsers).
+    try {
+      const res = await fetch('/api/status');
+      const data = await res.json();
+      if (data.confirmed) {
+        localStorage.setItem('dateLocked', JSON.stringify({ date: data.date, time: data.time }));
+        showConfirmed(data.date, data.time);
+      }
+    } catch {}
+  })();
+
+  function burstConfetti() {
+    const colors = ['#4caf6e', '#2e7d4f', '#6fbf73', '#a5d6a7', '#c8e6c9', '#81c784'];
+    for (let i = 0; i < 120; i++) {
+      const c = document.createElement('div');
+      c.className = 'confetti';
+      c.style.left = Math.random() * 100 + 'vw';
+      c.style.background = colors[Math.floor(Math.random() * colors.length)];
+      c.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+      const dur = 2.5 + Math.random() * 2.5;
+      c.style.animation = `fall ${dur}s ${Math.random()}s linear forwards`;
+      document.body.appendChild(c);
+      setTimeout(() => c.remove(), (dur + 1) * 1000);
+    }
+  }
+</script>
+</body>
+</html>
