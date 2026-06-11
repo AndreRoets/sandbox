@@ -62,6 +62,78 @@
     100% { transform: scale(1); opacity: 1; }
   }
 
+  /* ===== First-open flower bloom: petals unfurl, then reveal the card ===== */
+  .bloom-intro {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    animation: introOut 0.7s ease 2s forwards;
+  }
+  @keyframes introOut {
+    to { opacity: 0; visibility: hidden; }
+  }
+
+  .flower {
+    position: relative;
+    width: 0;
+    height: 0;
+  }
+  .petal {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 70px;
+    height: 130px;
+    margin-left: -35px;
+    margin-top: -130px;            /* base sits at flower centre, tip points up */
+    border-radius: 50% 50% 45% 45% / 70% 70% 30% 30%;
+    background: linear-gradient(180deg, #ffe1ee 0%, #ff9ec7 55%, #f06fa5 100%);
+    box-shadow: inset 0 -10px 18px rgba(214, 51, 132, 0.25);
+    transform-origin: 50% 100%;    /* rotate/scale around the flower centre */
+    transform: rotate(var(--a)) scale(0);
+    opacity: 0;
+    animation: petalUnfurl 1.3s cubic-bezier(0.34, 1.56, 0.64, 1) var(--d) forwards;
+  }
+  @keyframes petalUnfurl {
+    0%   { transform: rotate(calc(var(--a) * 0.2)) scaleY(0.12) scaleX(0.4); opacity: 0; }
+    40%  { opacity: 1; }
+    70%  { transform: rotate(var(--a)) scaleY(1.08) scaleX(1.05); opacity: 1; }
+    100% { transform: rotate(var(--a)) scale(1); opacity: 1; }
+  }
+  .flower-center {
+    position: absolute;
+    left: -32px;
+    top: -32px;
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: radial-gradient(circle, #fff3b0 0%, #ffcf4d 60%, #f6a700 100%);
+    box-shadow: 0 0 22px rgba(255, 200, 60, 0.7);
+    transform: scale(0);
+    opacity: 0;
+    animation: centerPop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 1.05s forwards;
+  }
+  @keyframes centerPop {
+    0%   { transform: scale(0); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  /* The card stays hidden until the flower has bloomed, then reveals from the centre */
+  .bloom { animation: cardReveal 0.8s cubic-bezier(0.18, 0.89, 0.32, 1.28) 1.75s backwards; }
+  @keyframes cardReveal {
+    0%   { transform: scale(0.55); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  /* Gentle swap between escalating questions */
+  @keyframes questionSwap {
+    0%   { transform: translateY(8px) scale(0.97); opacity: 0; }
+    100% { transform: translateY(0) scale(1); opacity: 1; }
+  }
+
   .big-heart {
     font-size: 64px;
     display: inline-block;
@@ -213,20 +285,35 @@
 </head>
 <body>
 
-  <div class="card" id="askCard">
+  <!-- First-open flower bloom: petals unfurl, then the card is revealed -->
+  <div class="bloom-intro" id="bloomIntro" aria-hidden="true">
+    <div class="flower">
+      <span class="petal" style="--a: 0deg;   --d: 0s;">  </span>
+      <span class="petal" style="--a: 45deg;  --d: 0.08s;"></span>
+      <span class="petal" style="--a: 90deg;  --d: 0.16s;"></span>
+      <span class="petal" style="--a: 135deg; --d: 0.24s;"></span>
+      <span class="petal" style="--a: 180deg; --d: 0.32s;"></span>
+      <span class="petal" style="--a: 225deg; --d: 0.40s;"></span>
+      <span class="petal" style="--a: 270deg; --d: 0.48s;"></span>
+      <span class="petal" style="--a: 315deg; --d: 0.56s;"></span>
+      <span class="flower-center"></span>
+    </div>
+  </div>
+
+  <div class="card bloom" id="askCard">
     <span class="big-heart" id="heart">💚</span>
     <h1 id="title">Will you go on a date with me?</h1>
-    <p class="sub" id="subtitle">No pressure… okay, maybe a little pressure 🌱</p>
+    <p class="sub" id="subtitle">No pressure… okay, maybe a little pressure</p>
     <div class="buttons">
-      <button class="yes" id="yesBtn">Yes! 🌸</button>
+      <button class="yes" id="yesBtn">Yes!</button>
       <button class="no" id="noBtn">No</button>
     </div>
   </div>
 
   <div class="card celebrate" id="celebrateCard">
     <span class="big-heart">🌻</span>
-    <h1>Yay! It's a date! 🌿</h1>
-    <p class="sub" id="celebrateSub">You just made my whole day. I can't wait! 🌷</p>
+    <h1>Yay! It's a date!</h1>
+    <p class="sub" id="celebrateSub">You just made my whole day. I can't wait!</p>
     <p class="date-badge" id="dateBadge" style="display:none;"></p>
   </div>
 
@@ -235,7 +322,7 @@
     <div class="card modal" id="modalCard">
       <span class="big-heart">🌸</span>
       <h1>Yay! Now… when?</h1>
-      <p class="sub">Pick a day for our date 🌿</p>
+      <p class="sub">Pick a day for our date</p>
       <div class="field">
         <label for="dateInput">Date</label>
         <input type="date" id="dateInput" />
@@ -246,11 +333,11 @@
       </div>
       <div class="field">
         <label for="noteInput">A little note <span class="opt">(optional)</span></label>
-        <textarea id="noteInput" rows="2" placeholder="Can't wait! 🌷"></textarea>
+        <textarea id="noteInput" rows="2" placeholder="Can't wait!"></textarea>
       </div>
       <p class="err" id="errMsg"></p>
       <div class="buttons">
-        <button class="yes" id="confirmBtn">Confirm 💚</button>
+        <button class="yes" id="confirmBtn">Confirm</button>
       </div>
     </div>
   </div>
@@ -284,36 +371,36 @@
     {
       heart: '🥺',
       title: 'Are you sure?',
-      subtitle: 'Take a moment… think about it 🍃',
-      yes: 'Okay, yes! 🌸',
+      subtitle: 'Take a moment… think about it',
+      yes: 'Okay, yes!',
       no: 'Still no',
     },
     {
       heart: '😟',
       title: 'Are you really sure?',
-      subtitle: "We could go for a walk in the park together 🌳",
-      yes: 'Fine, yes! 🌼',
+      subtitle: "We could go for a walk in the park together",
+      yes: 'Fine, yes!',
       no: 'Yes, no',
     },
     {
       heart: '😢',
       title: 'Please reconsider…',
-      subtitle: "Even the flowers are rooting for us 🌷",
-      yes: 'Aww okay, yes! 🌻',
+      subtitle: "Even the flowers are rooting for us",
+      yes: 'Aww okay, yes!',
       no: 'No, sorry',
     },
     {
       heart: '🥹',
-      title: 'Pretty please? 🌹',
-      subtitle: "I promise it'll bloom into the best date ever 🌱",
-      yes: 'Yes, of course! 🍀',
+      title: 'Pretty please?',
+      subtitle: "I promise it'll bloom into the best date ever",
+      yes: 'Yes, of course!',
       no: 'Last chance…',
     },
     {
       heart: '😭',
       title: 'Last chance!',
-      subtitle: "Go on, try to press No 😏",
-      yes: 'YES! 🌿🌸',
+      subtitle: "Go on, try to press No",
+      yes: 'YES!',
       no: 'No',
       dodge: true, // on this screen the No button runs away
     },
@@ -335,10 +422,10 @@
     // On the final screen, the No button becomes impossible to catch.
     dodging = !!s.dodge;
 
-    // Replay the pop-in animation for a fresh "new page" feel.
+    // Soft fade-swap for each new question (the petal bloom is first-open only).
     askCard.style.animation = 'none';
     void askCard.offsetWidth; // force reflow
-    askCard.style.animation = 'popIn 0.5s cubic-bezier(0.18, 0.89, 0.32, 1.28)';
+    askCard.style.animation = 'questionSwap 0.45s ease';
   }
 
   // On the last screen, the No button bounces to a random spot every time
@@ -405,10 +492,13 @@
 
   // Show the locked, confirmed screen (used after confirm AND on reload).
   function showConfirmed(date, time) {
+    // Skip the first-open flower bloom when we're going straight to the locked screen.
+    const intro = document.getElementById('bloomIntro');
+    if (intro) intro.style.display = 'none';
     overlay.classList.remove('show');
     askCard.style.display = 'none';
-    celebrateSub.textContent = "It's official — I can't wait! 🌷";
-    dateBadge.textContent = '📅 ' + prettyDate(date, time);
+    celebrateSub.textContent = "It's official — I can't wait!";
+    dateBadge.textContent = prettyDate(date, time);
     dateBadge.style.display = 'inline-block';
     celebrateCard.style.display = 'block';
   }
@@ -419,11 +509,11 @@
     const date = dateInput.value;
     const time = timeInput.value;
     const note = noteInput.value.trim();
-    if (!date) { errMsg.textContent = 'Please pick a date first 🌱'; return; }
+    if (!date) { errMsg.textContent = 'Please pick a date first'; return; }
 
     confirmBtn.disabled = true;
     const original = confirmBtn.textContent;
-    confirmBtn.textContent = 'Sending… 💌';
+    confirmBtn.textContent = 'Sending…';
     try {
       const res = await fetch('/api/confirm', {
         method: 'POST',
@@ -443,22 +533,26 @@
     }
   });
 
-  // --- On load: if a date was already confirmed, lock straight to it ---
+  // --- On load: the server is the source of truth for whether it's locked ---
   (async function checkLock() {
-    // Local lock first (instant, offline-safe).
-    try {
-      const local = JSON.parse(localStorage.getItem('dateLocked') || 'null');
-      if (local && local.date) { showConfirmed(local.date, local.time); return; }
-    } catch {}
-    // Then the server (source of truth, survives different browsers).
     try {
       const res = await fetch('/api/status');
       const data = await res.json();
       if (data.confirmed) {
+        // Locked on the server — mirror it locally and show the confirmed screen.
         localStorage.setItem('dateLocked', JSON.stringify({ date: data.date, time: data.time }));
         showConfirmed(data.date, data.time);
+      } else {
+        // Server has been reset — clear any stale local lock and show the question.
+        localStorage.removeItem('dateLocked');
       }
-    } catch {}
+    } catch {
+      // Server unreachable (offline) — fall back to the local lock if we have one.
+      try {
+        const local = JSON.parse(localStorage.getItem('dateLocked') || 'null');
+        if (local && local.date) showConfirmed(local.date, local.time);
+      } catch {}
+    }
   })();
 
   function burstConfetti() {

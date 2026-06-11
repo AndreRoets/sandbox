@@ -25,3 +25,4 @@ npm-debug.log
 yarn-error.log
 mail.config.json
 date-state.json
+opened-state.json

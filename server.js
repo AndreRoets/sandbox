@@ -19,6 +19,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 3000;
 const ROOT = __dirname;
 const STATE_FILE = path.join(ROOT, 'date-state.json'); // its existence = "locked"
+const OPENED_FILE = path.join(ROOT, 'opened-state.json'); // its existence = "open email already sent"
 const NOTIFY_TO = 'a.roets12@gmail.com';
 
 const MIME = {
@@ -120,11 +121,37 @@ function readState() {
   catch { return null; }
 }
 
+// Fire a "the link was opened" email the FIRST time the page is loaded.
+// Writes a marker file before sending so concurrent loads only email once.
+function notifyOpenedOnce() {
+  // wx = create-only: throws if the marker already exists, so this body runs just once.
+  try { fs.writeFileSync(OPENED_FILE, JSON.stringify({ at: new Date().toISOString() }, null, 2), { flag: 'wx' }); }
+  catch { return; } // already sent (marker exists) — nothing to do
+
+  const { user, pass } = loadMailConfig();
+  const at = new Date().toISOString();
+  const subject = '👀 Your date link was just opened!';
+  const text = [
+    'Someone just opened the date page for the first time. 🌸',
+    '',
+    `Opened at ${at}`,
+  ].join('\n');
+
+  if (user && pass) {
+    sendMail({ user, pass, to: NOTIFY_TO, subject, text })
+      .then(() => console.log('✉️  Link-opened email sent.'))
+      .catch((e) => console.error('✉️  Link-opened email failed:', e.message));
+  } else {
+    console.log('✉️  No SMTP credentials set — link opened, logging instead:\n' + text + '\n');
+  }
+}
+
 const server = http.createServer((req, res) => {
   const urlPath = decodeURIComponent(req.url.split('?')[0]);
 
   // --- Status: is the page already locked to a confirmed date? ---
   if (req.method === 'GET' && urlPath === '/api/status') {
+    notifyOpenedOnce(); // first time the link is opened, email the notify address
     const state = readState();
     if (state) return sendJson(res, 200, { confirmed: true, date: state.date, time: state.time });
     return sendJson(res, 200, { confirmed: false });
