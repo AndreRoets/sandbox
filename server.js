@@ -12,6 +12,7 @@
 import http from 'http';
 import fs from 'fs';
 import path from 'path';
+import net from 'net';
 import tls from 'tls';
 import { fileURLToPath } from 'url';
 
@@ -50,11 +51,13 @@ function loadMailConfig() {
   return cfg;
 }
 
-// --- Zero-dependency Gmail SMTP sender (SSL on :465, AUTH LOGIN) ---
+// --- Zero-dependency Gmail SMTP sender (submission on :587, STARTTLS, AUTH LOGIN) ---
+// Port 587 + STARTTLS is used because many hosts (e.g. Hetzner) block the implicit-TLS
+// port 465 outbound. Override the port with SMTP_PORT if needed.
 function sendMail({ user, pass, to, subject, text }) {
   return new Promise((resolve, reject) => {
     const host = 'smtp.gmail.com';
-    const port = 465;
+    const port = Number(process.env.SMTP_PORT) || 587;
     const message = [
       `From: Date Page <${user}>`,
       `To: ${to}`,
@@ -66,8 +69,11 @@ function sendMail({ user, pass, to, subject, text }) {
     ].join('\r\n');
 
     // Each step waits for `expect` (the final SMTP reply code) then sends `cmd`.
+    // The step flagged `starttls` upgrades the plaintext socket to TLS before its cmd.
     const steps = [
-      { expect: 220, cmd: 'EHLO localhost\r\n' },
+      { expect: 220, cmd: 'EHLO localhost\r\n' },                                  // server greeting
+      { expect: 250, cmd: 'STARTTLS\r\n' },                                        // ask to go secure
+      { expect: 220, cmd: 'EHLO localhost\r\n', starttls: true },                  // upgrade, re-greet
       { expect: 250, cmd: 'AUTH LOGIN\r\n' },
       { expect: 334, cmd: Buffer.from(user).toString('base64') + '\r\n' },
       { expect: 334, cmd: Buffer.from(pass).toString('base64') + '\r\n' },
@@ -78,14 +84,36 @@ function sendMail({ user, pass, to, subject, text }) {
       { expect: 250, cmd: 'QUIT\r\n' },
     ];
 
-    const socket = tls.connect(port, host, { servername: host });
+    let socket = net.connect(port, host);
     socket.setEncoding('utf8');
     socket.setTimeout(20000);
     let i = 0;
     let buf = '';
+    let done = false;
 
-    socket.on('data', (chunk) => {
-      if (i >= steps.length) return; // all done — ignore the QUIT (221) reply
+    // Unwrap AggregateError (Node ≥17 returns one when all addresses fail) so the
+    // rejection carries a real message instead of an empty string.
+    const fail = (err) => {
+      if (done) return;
+      done = true;
+      try { socket.destroy(); } catch { /* already gone */ }
+      if (err && Array.isArray(err.errors) && err.errors.length) {
+        const inner = err.errors.map((e) => e.message || e.code || String(e)).join('; ');
+        return reject(new Error(err.message || inner || 'connection failed'));
+      }
+      reject(err instanceof Error ? err : new Error(String(err)));
+    };
+
+    const attach = (s) => {
+      s.setEncoding('utf8');
+      s.setTimeout(20000);
+      s.on('data', onData);
+      s.on('error', fail);
+      s.on('timeout', () => fail(new Error('SMTP timeout')));
+    };
+
+    function onData(chunk) {
+      if (done || i >= steps.length) return;
       buf += chunk;
       let idx;
       while ((idx = buf.indexOf('\r\n')) !== -1) {
@@ -97,17 +125,30 @@ function sendMail({ user, pass, to, subject, text }) {
         const code = parseInt(m[1], 10);
         const step = steps[i];
         if (code !== step.expect) {
-          socket.destroy();
-          return reject(new Error(`SMTP step ${i}: expected ${step.expect}, got "${line}"`));
+          return fail(new Error(`SMTP step ${i}: expected ${step.expect}, got "${line}"`));
+        }
+        i++;
+        if (step.starttls) {
+          // Upgrade the plaintext socket to TLS, then send this step's cmd over it.
+          socket.removeListener('data', onData);
+          buf = '';
+          const secure = tls.connect({ socket, servername: host }, () => {
+            socket = secure;
+            attach(secure);
+            secure.write(step.cmd);
+          });
+          secure.on('error', fail);
+          return; // wait for the secure channel and its replies
         }
         socket.write(step.cmd);
-        i++;
-        if (i >= steps.length) { socket.end(); return resolve(); }
+        if (i >= steps.length) { socket.end(); done = true; return resolve(); }
         break; // wait for the next reply
       }
-    });
-    socket.on('error', reject);
-    socket.on('timeout', () => { socket.destroy(); reject(new Error('SMTP timeout')); });
+    }
+
+    socket.on('data', onData);
+    socket.on('error', fail);
+    socket.on('timeout', () => fail(new Error('SMTP timeout')));
   });
 }
 
